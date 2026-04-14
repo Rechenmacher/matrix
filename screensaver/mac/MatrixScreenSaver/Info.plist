@@ -15,9 +15,9 @@
     <key>CFBundlePackageType</key>
     <string>BNDL</string>
     <key>CFBundleExecutable</key>
-    <string>MatrixScreenSaver</string>
+    <string>$(EXECUTABLE_NAME)</string>
     <key>NSPrincipalClass</key>
-    <string>MatrixScreenSaver.MatrixScreenSaverView</string>
+    <string>Matrix.MatrixScreenSaverView</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>NSSupportsAutomaticGraphicsSwitching</key>

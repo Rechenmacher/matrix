@@ -1,62 +1,69 @@
 import ScreenSaver
-import WebKit
 
+/// Thin .saver wrapper that launches the MatrixSaverApp companion app.
+/// WKWebView cannot render inside the screensaver sandbox on modern macOS,
+/// so the actual rendering happens in a standalone app with full GPU access.
 class MatrixScreenSaverView: ScreenSaverView {
 
-    private var webView: WKWebView?
-    private var configSheet: NSWindow?
+    private var appProcess: Process?
     private var sheetController: ConfigureSheetController?
 
     // MARK: - Init
 
     override init?(frame: NSRect, isPreview: Bool) {
         super.init(frame: frame, isPreview: isPreview)
-        setupWebView()
+        wantsLayer = true
+        layer?.backgroundColor = NSColor.black.cgColor
     }
 
     required init?(coder: NSCoder) {
         super.init(coder: coder)
-        setupWebView()
+        wantsLayer = true
+        layer?.backgroundColor = NSColor.black.cgColor
     }
 
-    // MARK: - Setup
+    // MARK: - Animation
 
-    private func setupWebView() {
-        let prefs = MatrixPreferences.load()
+    override func startAnimation() {
+        super.startAnimation()
 
-        let config = WKWebViewConfiguration()
-        config.preferences.setValue(true, forKey: "allowFileAccessFromFileURLs")
-        // WebGL requires the GPU process; no extra flags needed on macOS 12+
+        // Don't launch the fullscreen app in the tiny System Settings preview thumbnail
+        if isPreview { return }
 
-        let wv = WKWebView(frame: bounds, configuration: config)
-        wv.autoresizingMask = [.width, .height]
-        wv.enclosingScrollView?.hasHorizontalScroller = false
-        wv.enclosingScrollView?.hasVerticalScroller = false
+        let bundle = Bundle(for: type(of: self))
 
-        // Disable right-click context menu
-        wv.configuration.preferences.setValue(false, forKey: "developerExtrasEnabled")
-
-        addSubview(wv)
-        self.webView = wv
-
-        loadMatrix(with: prefs)
-    }
-
-    private func loadMatrix(with prefs: MatrixPreferences) {
-        guard let resourceURL = Bundle(for: type(of: self))
-            .url(forResource: "index", withExtension: "html") else {
+        guard let appPath = bundle.path(forResource: "MatrixSaverApp", ofType: nil) else {
             return
         }
 
-        var components = URLComponents(url: resourceURL, resolvingAgainstBaseURL: false)!
-        components.queryItems = prefs.asQueryItems()
+        let webRoot = bundle.resourcePath ?? bundle.bundlePath
 
-        if let url = components.url {
-            webView?.loadFileURL(url, allowingReadAccessTo: resourceURL.deletingLastPathComponent())
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: appPath)
+        process.arguments = [webRoot]
+
+        do {
+            try process.run()
+            appProcess = process
+        } catch {
+            // Silently fail — the user sees a black screen, which is acceptable
         }
     }
 
-    // MARK: - ScreenSaverView overrides
+    override func stopAnimation() {
+        super.stopAnimation()
+        if let p = appProcess, p.isRunning {
+            p.terminate()
+            p.waitUntilExit()
+        }
+        appProcess = nil
+    }
+
+    override func animateOneFrame() {
+        // Rendering handled by companion app
+    }
+
+    // MARK: - Configuration
 
     override var hasConfigureSheet: Bool { true }
 
@@ -68,18 +75,8 @@ class MatrixScreenSaverView: ScreenSaverView {
         return sheetController?.window
     }
 
-    /// Called by ConfigureSheetController after the user saves preferences.
     func reloadWithCurrentPreferences() {
-        loadMatrix(with: MatrixPreferences.load())
-    }
-
-    override func animateOneFrame() {
-        // Animation is driven by the web app's own requestAnimationFrame loop.
-    }
-
-    override func startAnimation() {
-        super.startAnimation()
-        // Resume if the page was suspended (e.g. power nap woke the screensaver briefly)
-        webView?.evaluateJavaScript("document.dispatchEvent(new Event('visibilitychange'))", completionHandler: nil)
+        stopAnimation()
+        startAnimation()
     }
 }
