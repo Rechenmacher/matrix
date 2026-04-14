@@ -65,8 +65,8 @@ screensaver/
 ## Status
 
 **Last updated:** 2026-04-14  
-**Current phase:** 1 complete (code written), awaiting build + test by user.  
-**Branch:** `screensaver-port` (local only — push to fork once GitHub account is recovered)
+**Current phase:** 1 complete and tested. macOS screensaver working.  
+**Branch:** `screensaver-port` on `fork` remote (github.com/Rechenmacher/matrix)
 
 ### Phase checklist
 
@@ -76,18 +76,19 @@ screensaver/
 - [x] Create `screensaver/` directory skeleton
 - [ ] Commit skeleton to establish structure — do this once fork/push is unblocked
 
-#### Phase 1 — macOS `.saver` (target: 1–2 sessions)
+#### Phase 1 — macOS `.saver` (COMPLETE)
 - [x] Create Xcode project: `Cocoa Framework` target, macOS 12+
-- [x] Subclass `ScreenSaverView`, embed `WKWebView` filling the frame
-- [x] Load `index.html` from bundle resources via `file://` URL with `skipIntro=true&suppressWarnings=true`
-- [x] Disable WKWebView scrolling, selection, and context menu
-- [x] Add `hasConfigureSheet` preferences panel exposing: `version`, `effect`, `animationSpeed`, `bloomStrength`
-- [x] Persist prefs with `ScreenSaverDefaults`
-- [x] Build phase script: `copy_web_assets.sh` copies `js/`, `shaders/`, `assets/`, `lib/`, `index.html`
-- [ ] **NEXT:** Open `screensaver/mac/matrix.xcodeproj` in Xcode, add `copy_web_assets.sh` as a Run Script build phase, build, and install the `.saver`
-- [ ] Test: System Settings → Screen Saver → Matrix
-- [ ] Sign with `codesign` (ad-hoc for local use: `codesign --force --deep -s - Matrix.saver`)
-- [ ] Document notarization steps (for distribution)
+- [x] **Pivot to companion app pattern** — WKWebView cannot render inside .saver sandbox on modern macOS (process suspension + invisible compositor). Solved with MatrixSaverApp launched by .saver.
+- [x] MatrixSaverApp: standalone app, fullscreen WKWebView on all screens, exits on input/SIGTERM
+- [x] MatrixScreenSaverView: thin .saver wrapper, launches/kills companion app
+- [x] ConfigureSheetController: preferences panel (version, effect, animationSpeed, bloomStrength)
+- [x] MatrixPreferences: persistence via ScreenSaverDefaults
+- [x] build.sh: one-command build, universal binary (arm64e + x86_64), macOS 12+
+- [x] Visual tuning: Matrix 1 (1999) movie style
+- [x] Tested and working on macOS 16 (Darwin 25.3.0)
+- [x] Ad-hoc signed, 3.2 MB bundle
+- [ ] **REMAINING:** Apple Developer ID signing + notarization for Gatekeeper (requires $99/year account)
+- [ ] **REMAINING:** Preview thumbnail rendering in System Settings (currently shows black)
 
 **Key Swift APIs:** `ScreenSaver.framework`, `WKWebView`, `WKWebViewConfiguration`, `WKPreferences`, `ScreenSaverDefaults`
 

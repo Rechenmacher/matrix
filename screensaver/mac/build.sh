@@ -60,6 +60,10 @@ for item in index.html js shaders assets lib; do
   cp -R "${REPO_ROOT}/${item}" "${RESOURCES}/${item}"
 done
 
+# Copy thumbnail and preview images for System Settings
+cp "${SCRIPT_DIR}/MatrixScreenSaver/thumbnail.png" "${RESOURCES}/thumbnail.png" 2>/dev/null || true
+cp "${SCRIPT_DIR}/MatrixScreenSaver/preview.png" "${RESOURCES}/preview.png" 2>/dev/null || true
+
 # 4. Ad-hoc sign (replace with Developer ID for distribution)
 echo "[4/5] Code signing..."
 codesign --force --deep -s - "${SAVER}"

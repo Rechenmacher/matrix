@@ -61,8 +61,19 @@ class MatrixAppDelegate: NSObject, NSApplicationDelegate {
             return
         }
 
+        let overrides = parseOverrides()
+
         var components = URLComponents(url: indexURL, resolvingAgainstBaseURL: false)!
-        components.queryItems = MatrixConfig.defaultParams.map {
+        var params = MatrixConfig.defaultParams
+        // Apply user preference overrides on top of defaults
+        for (key, value) in overrides {
+            if let idx = params.firstIndex(where: { $0.0 == key }) {
+                params[idx] = (key, value)
+            } else {
+                params.append((key, value))
+            }
+        }
+        components.queryItems = params.map {
             URLQueryItem(name: $0.0, value: $0.1)
         }
 
@@ -72,9 +83,6 @@ class MatrixAppDelegate: NSObject, NSApplicationDelegate {
         }
 
         let resourceDir = indexURL.deletingLastPathComponent()
-
-        // Remember initial mouse position to detect real movement vs jitter
-        initialMouseLocation = NSEvent.mouseLocation
 
         // Create a fullscreen window on every connected display
         for screen in NSScreen.screens {
@@ -105,7 +113,14 @@ class MatrixAppDelegate: NSObject, NSApplicationDelegate {
         }
 
         NSCursor.hide()
-        installInputMonitors()
+
+        // Grace period: don't listen for input for 2 seconds after launch.
+        // Without this, clicking "Preview" in System Settings triggers an
+        // immediate exit because the mouse is still moving from the click.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
+            self?.initialMouseLocation = NSEvent.mouseLocation
+            self?.installInputMonitors()
+        }
 
         // Handle SIGTERM gracefully (sent by .saver's stopAnimation)
         signal(SIGTERM) { _ in
@@ -142,6 +157,25 @@ class MatrixAppDelegate: NSObject, NSApplicationDelegate {
             }
         }
         NSApp.terminate(nil)
+    }
+
+    // MARK: - Preference overrides
+
+    /// Parses --key value pairs from command-line arguments (after the first arg which is webRoot)
+    private func parseOverrides() -> [(String, String)] {
+        var overrides: [(String, String)] = []
+        let args = Array(CommandLine.arguments.dropFirst(2)) // skip binary path + webRoot
+        var i = 0
+        while i < args.count - 1 {
+            let key = args[i]
+            if key.hasPrefix("--") {
+                overrides.append((String(key.dropFirst(2)), args[i + 1]))
+                i += 2
+            } else {
+                i += 1
+            }
+        }
+        return overrides
     }
 }
 

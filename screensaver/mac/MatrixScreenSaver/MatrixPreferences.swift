@@ -43,6 +43,17 @@ struct MatrixPreferences {
             URLQueryItem(name: "bloomStrength",     value: String(bloomStrength)),
         ]
     }
+
+    // MARK: - Command-line conversion (passed to companion app)
+
+    func asCommandLineArgs() -> [String] {
+        return [
+            "--version", version,
+            "--effect", effect,
+            "--animationSpeed", String(animationSpeed),
+            "--bloomStrength", String(bloomStrength),
+        ]
+    }
 }
 
 // MARK: - Helpers

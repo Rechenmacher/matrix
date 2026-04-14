@@ -7,6 +7,7 @@ class MatrixScreenSaverView: ScreenSaverView {
 
     private var appProcess: Process?
     private var sheetController: ConfigureSheetController?
+    private var previewImageView: NSImageView?
 
     // MARK: - Init
 
@@ -14,12 +15,28 @@ class MatrixScreenSaverView: ScreenSaverView {
         super.init(frame: frame, isPreview: isPreview)
         wantsLayer = true
         layer?.backgroundColor = NSColor.black.cgColor
+        setupPreviewImage()
     }
 
     required init?(coder: NSCoder) {
         super.init(coder: coder)
         wantsLayer = true
         layer?.backgroundColor = NSColor.black.cgColor
+        setupPreviewImage()
+    }
+
+    /// Show a static Matrix screenshot in the System Settings thumbnail
+    private func setupPreviewImage() {
+        let bundle = Bundle(for: type(of: self))
+        guard let imgPath = bundle.path(forResource: "preview", ofType: "png"),
+              let image = NSImage(contentsOfFile: imgPath) else { return }
+
+        let iv = NSImageView(frame: bounds)
+        iv.image = image
+        iv.imageScaling = .scaleAxesIndependently
+        iv.autoresizingMask = [.width, .height]
+        addSubview(iv)
+        previewImageView = iv
     }
 
     // MARK: - Animation
@@ -27,8 +44,9 @@ class MatrixScreenSaverView: ScreenSaverView {
     override func startAnimation() {
         super.startAnimation()
 
-        // Don't launch the fullscreen app in the tiny System Settings preview thumbnail
-        if isPreview { return }
+        // Skip the tiny thumbnail in System Settings (typically ~300x200)
+        // but allow the full-screen Preview mode
+        if frame.width < 500 || frame.height < 500 { return }
 
         let bundle = Bundle(for: type(of: self))
 
@@ -37,10 +55,15 @@ class MatrixScreenSaverView: ScreenSaverView {
         }
 
         let webRoot = bundle.resourcePath ?? bundle.bundlePath
+        let prefs = MatrixPreferences.load()
+
+        // Hide the static preview image — the companion app renders fullscreen
+        previewImageView?.isHidden = true
 
         let process = Process()
         process.executableURL = URL(fileURLWithPath: appPath)
         process.arguments = [webRoot]
+            + prefs.asCommandLineArgs()
 
         do {
             try process.run()
