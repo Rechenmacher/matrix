@@ -4,7 +4,7 @@
     <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0-windows</TargetFramework>
     <UseWindowsForms>true</UseWindowsForms>
-    <ApplicationIcon>matrix.ico</ApplicationIcon>
+    <!-- <ApplicationIcon>matrix.ico</ApplicationIcon> -->
     <AssemblyName>MatrixScreenSaver</AssemblyName>
     <RootNamespace>MatrixScreenSaver</RootNamespace>
     <Nullable>enable</Nullable>
