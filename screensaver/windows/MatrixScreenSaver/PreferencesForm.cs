@@ -81,7 +81,7 @@ class PreferencesForm : Form
             Width = controlW - 40,
         };
         _speedTrack.ValueChanged += (_, _) =>
-            _speedValueLabel.Text = (_speedTrack.Value / 10.0).ToString("F1");
+            _speedValueLabel!.Text = (_speedTrack.Value / 10.0).ToString("F1");
         Controls.Add(_speedTrack);
 
         _speedValueLabel = new Label
@@ -105,7 +105,7 @@ class PreferencesForm : Form
             Width = controlW - 40,
         };
         _bloomTrack.ValueChanged += (_, _) =>
-            _bloomValueLabel.Text = (_bloomTrack.Value / 10.0).ToString("F1");
+            _bloomValueLabel!.Text = (_bloomTrack.Value / 10.0).ToString("F1");
         Controls.Add(_bloomTrack);
 
         _bloomValueLabel = new Label

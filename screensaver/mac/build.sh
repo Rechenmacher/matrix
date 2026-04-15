@@ -8,7 +8,7 @@ DIST_DIR="${SCRIPT_DIR}/dist"
 
 echo "=== Matrix Screensaver Build ==="
 
-# 1. Build the .saver bundle (arm64e + x86_64)
+# 1. Build the .saver bundle (arm64 + x86_64)
 echo "[1/5] Building .saver bundle..."
 cd "${SCRIPT_DIR}"
 xcodebuild -project matrix.xcodeproj \
@@ -16,7 +16,7 @@ xcodebuild -project matrix.xcodeproj \
   -configuration Release \
   build \
   CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
-  ARCHS="arm64e x86_64" VALID_ARCHS="arm64e x86_64" ONLY_ACTIVE_ARCH=NO \
+  ARCHS="arm64 x86_64" VALID_ARCHS="arm64 x86_64" ONLY_ACTIVE_ARCH=NO \
   BUILD_DIR="${BUILD_DIR}" \
   2>&1 | grep -E "(BUILD|error:)" || true
 
@@ -29,9 +29,9 @@ fi
 # 2. Compile the companion app as a universal binary
 echo "[2/5] Compiling MatrixSaverApp (universal)..."
 swiftc -O \
-  -o "${BUILD_DIR}/MatrixSaverApp_arm64e" \
+  -o "${BUILD_DIR}/MatrixSaverApp_arm64" \
   -framework Cocoa -framework WebKit \
-  -target arm64e-apple-macos12.0 \
+  -target arm64-apple-macos12.0 \
   MatrixScreenSaver/MatrixSaverApp.swift
 
 swiftc -O \
@@ -41,7 +41,7 @@ swiftc -O \
   MatrixScreenSaver/MatrixSaverApp.swift
 
 lipo -create \
-  "${BUILD_DIR}/MatrixSaverApp_arm64e" \
+  "${BUILD_DIR}/MatrixSaverApp_arm64" \
   "${BUILD_DIR}/MatrixSaverApp_x86_64" \
   -output "${BUILD_DIR}/MatrixSaverApp"
 

@@ -26,9 +26,12 @@ jobs:
 
       - name: Verify build output
         run: |
-          test -d screensaver/mac/dist/Matrix.saver/Contents/MacOS/Matrix || \
+          test -f screensaver/mac/dist/Matrix.saver/Contents/MacOS/Matrix || \
             (echo "ERROR: .saver bundle not found" && exit 1)
+          test -f screensaver/mac/dist/Matrix.saver/Contents/Resources/MatrixSaverApp || \
+            (echo "ERROR: companion app not found" && exit 1)
           echo "macOS build OK"
+          file screensaver/mac/dist/Matrix.saver/Contents/MacOS/Matrix
 
   # ── Windows ────────────────────────────────────────────
   build-windows:

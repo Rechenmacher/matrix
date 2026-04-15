@@ -56,7 +56,7 @@ class ScreensaverForm : Form
         };
 
         // Input events — exit on any interaction (after grace period)
-        var graceTimer = new Timer { Interval = 2000 };
+        var graceTimer = new System.Windows.Forms.Timer { Interval = 2000 };
         graceTimer.Tick += (_, _) =>
         {
             graceTimer.Stop();
