@@ -6,6 +6,8 @@ on:
     paths:
       - 'screensaver/**'
       - '.github/workflows/screensaver-ci.yml'
+    tags:
+      - 'screensaver-v*'
   pull_request:
     branches: [master]
     paths:
@@ -32,6 +34,24 @@ jobs:
             (echo "ERROR: companion app not found" && exit 1)
           echo "macOS build OK"
           file screensaver/mac/dist/Matrix.saver/Contents/MacOS/Matrix
+
+      - name: Package artifact
+        run: |
+          cd screensaver/mac/dist
+          zip -r Matrix-Screensaver-macOS.zip Matrix.saver
+
+      - name: Generate checksum
+        run: |
+          cd screensaver/mac/dist
+          shasum -a 256 Matrix-Screensaver-macOS.zip > Matrix-Screensaver-macOS.zip.sha256
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Matrix-Screensaver-macOS
+          path: |
+            screensaver/mac/dist/Matrix-Screensaver-macOS.zip
+            screensaver/mac/dist/Matrix-Screensaver-macOS.zip.sha256
 
   # ── Windows ────────────────────────────────────────────
   build-windows:
@@ -63,11 +83,48 @@ jobs:
           }
           Write-Host "Windows build OK"
 
+      - name: Package artifact
+        run: |
+          $distDir = "screensaver/windows/dist"
+          $pkgDir = "$distDir/MatrixScreenSaver"
+          New-Item -ItemType Directory -Path $pkgDir | Out-Null
+
+          # Copy the .scr (renamed .exe)
+          Copy-Item "$distDir/build/MatrixScreenSaver.exe" "$pkgDir/MatrixScreenSaver.scr"
+
+          # Copy WebView2 loader if present
+          $loader = "$distDir/build/WebView2Loader.dll"
+          if (Test-Path $loader) { Copy-Item $loader $pkgDir }
+
+          # Copy web assets from repo root
+          $webDir = "$pkgDir/web"
+          New-Item -ItemType Directory -Path $webDir | Out-Null
+          foreach ($item in @("index.html", "js", "lib", "shaders", "assets")) {
+            $src = $item
+            if (Test-Path $src) {
+              if ((Get-Item $src).PSIsContainer) {
+                Copy-Item -Recurse $src "$webDir/$item"
+              } else {
+                Copy-Item $src "$webDir/$item"
+              }
+            }
+          }
+
+          # Zip it
+          Compress-Archive -Path $pkgDir -DestinationPath "$distDir/Matrix-Screensaver-Windows.zip"
+
+      - name: Generate checksum
+        run: |
+          $hash = Get-FileHash "screensaver/windows/dist/Matrix-Screensaver-Windows.zip" -Algorithm SHA256
+          "$($hash.Hash)  Matrix-Screensaver-Windows.zip" | Out-File "screensaver/windows/dist/Matrix-Screensaver-Windows.zip.sha256" -Encoding ascii
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: MatrixScreenSaver-windows
-          path: screensaver/windows/dist/build/MatrixScreenSaver.exe
+          name: Matrix-Screensaver-Windows
+          path: |
+            screensaver/windows/dist/Matrix-Screensaver-Windows.zip
+            screensaver/windows/dist/Matrix-Screensaver-Windows.zip.sha256
 
   # ── Linux ──────────────────────────────────────────────
   build-linux:
@@ -97,8 +154,84 @@ jobs:
             (echo "ERROR: binary not found" && exit 1)
           echo "Linux build OK"
 
+      - name: Package artifact
+        run: |
+          mkdir -p screensaver/linux/dist/matrix-screensaver
+          cp screensaver/linux/build/matrix-screensaver screensaver/linux/dist/matrix-screensaver/
+          cp screensaver/linux/install.sh screensaver/linux/dist/matrix-screensaver/
+          cp screensaver/linux/matrix-screensaver.desktop screensaver/linux/dist/matrix-screensaver/
+
+          # Bundle web assets
+          mkdir -p screensaver/linux/dist/matrix-screensaver/web
+          for item in index.html js lib shaders assets; do
+            [ -e "$item" ] && cp -r "$item" screensaver/linux/dist/matrix-screensaver/web/
+          done
+
+          cd screensaver/linux/dist
+          tar czf Matrix-Screensaver-Linux-x86_64.tar.gz matrix-screensaver
+
+      - name: Generate checksum
+        run: |
+          cd screensaver/linux/dist
+          sha256sum Matrix-Screensaver-Linux-x86_64.tar.gz > Matrix-Screensaver-Linux-x86_64.tar.gz.sha256
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: matrix-screensaver-linux
-          path: screensaver/linux/build/matrix-screensaver
+          name: Matrix-Screensaver-Linux
+          path: |
+            screensaver/linux/dist/Matrix-Screensaver-Linux-x86_64.tar.gz
+            screensaver/linux/dist/Matrix-Screensaver-Linux-x86_64.tar.gz.sha256
+
+  # ── Release ────────────────────────────────────────────
+  # Creates a GitHub Release with all platform binaries when a tag is pushed.
+  # Tag format: screensaver-v1.0.0
+  release:
+    if: startsWith(github.ref, 'refs/tags/screensaver-v')
+    needs: [build-macos, build-windows, build-linux]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+          VERSION="${TAG#screensaver-}"
+
+          # Collect all release files
+          FILES=$(find artifacts -type f \( -name "*.zip" -o -name "*.tar.gz" -o -name "*.sha256" \))
+
+          gh release create "$TAG" \
+            --title "Matrix Screensaver $VERSION" \
+            --notes "$(cat <<'NOTES'
+          ## Matrix Screensaver $VERSION
+
+          Native screensaver wrappers for the Matrix digital rain web app.
+
+          ### Downloads
+
+          | Platform | File | Requirements |
+          |----------|------|-------------|
+          | macOS | `Matrix-Screensaver-macOS.zip` | macOS 12+ |
+          | Windows | `Matrix-Screensaver-Windows.zip` | Windows 10+, [WebView2 Runtime](https://developer.microsoft.com/en-us/microsoft-edge/webview2/), .NET 8 |
+          | Linux | `Matrix-Screensaver-Linux-x86_64.tar.gz` | GTK4, WebKitGTK 6.0+ |
+
+          ### Verify checksums
+          ```bash
+          shasum -a 256 -c Matrix-Screensaver-macOS.zip.sha256
+          sha256sum -c Matrix-Screensaver-Linux-x86_64.tar.gz.sha256
+          # Windows: certutil -hashfile Matrix-Screensaver-Windows.zip SHA256
+          ```
+          NOTES
+          )" \
+            --draft \
+            $FILES
