@@ -1,6 +1,6 @@
 # Screensaver Port — Implementation Plan
 
-> **Session continuity doc.** Any Claude Code session starting work here should read this file first, check the `## Status` section for current progress, and update it before ending the session.
+> Implementation plan and progress tracker for the screensaver port.
 
 ## Goal
 
@@ -9,26 +9,6 @@ Add native screensaver wrappers for macOS, Windows, and Linux that embed the exi
 The rendering code does not change. Only thin native wrappers are added.
 
 ---
-
-## Git Setup (one-time, not yet done)
-
-The local repo currently tracks `origin = https://github.com/Rezmason/matrix.git` (upstream).
-
-Steps before first commit:
-1. User forks `Rezmason/matrix` on GitHub (click Fork in the browser)
-2. Add fork as a second remote:
-   ```bash
-   git remote add fork https://github.com/<YOUR_GITHUB_USERNAME>/matrix.git
-   ```
-3. Create a feature branch:
-   ```bash
-   git checkout -b screensaver-port
-   ```
-4. All commits pushed to `fork`, not `origin`:
-   ```bash
-   git push -u fork screensaver-port
-   ```
-5. When ready: open PR from `<username>/matrix:screensaver-port` → `Rezmason/matrix:master`
 
 ---
 
@@ -65,16 +45,13 @@ screensaver/
 ## Status
 
 **Last updated:** 2026-04-15  
-**Current phase:** 2+3 code written. CI workflow added. Needs build verification via GitHub Actions.  
-**Branch:** `screensaver-port` on `fork` remote (github.com/Rechenmacher/matrix)
+**Current phase:** All three platforms implemented. CI workflow added. Needs build verification and testing.
 
 ### Phase checklist
 
 #### Phase 0 — Repo scaffolding
-- [x] User forks repo and adds `fork` remote — DEFERRED (GitHub account recovery in progress)
 - [x] Create `screensaver-port` branch
 - [x] Create `screensaver/` directory skeleton
-- [ ] Commit skeleton to establish structure — do this once fork/push is unblocked
 
 #### Phase 1 — macOS `.saver` (COMPLETE)
 - [x] Create Xcode project: `Cocoa Framework` target, macOS 12+
