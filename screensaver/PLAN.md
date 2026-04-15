@@ -64,8 +64,8 @@ screensaver/
 
 ## Status
 
-**Last updated:** 2026-04-14  
-**Current phase:** 1 complete and tested. macOS screensaver working.  
+**Last updated:** 2026-04-15  
+**Current phase:** 2+3 code written. CI workflow added. Needs build verification via GitHub Actions.  
 **Branch:** `screensaver-port` on `fork` remote (github.com/Rechenmacher/matrix)
 
 ### Phase checklist
@@ -93,27 +93,28 @@ screensaver/
 **Key Swift APIs:** `ScreenSaver.framework`, `WKWebView`, `WKWebViewConfiguration`, `WKPreferences`, `ScreenSaverDefaults`
 
 #### Phase 2 — Windows `.scr` (target: 1–2 sessions)
-- [ ] Create .NET 8 WinForms project targeting `net8.0-windows`
-- [ ] Add NuGet: `Microsoft.Web.WebView2`
-- [ ] Implement `Program.cs`: parse `/s` (screensaver), `/p <HWND>` (preview), `/c` (configure), no args → configure
-- [ ] `ScreensaverForm.cs`: fullscreen `Form` with `WebView2` control, load `index.html` from app directory
-- [ ] `PreferencesForm.cs`: simple WinForms dialog (same options as Mac prefs)
-- [ ] Persist settings: `System.Configuration.ConfigurationManager` or simple JSON in `%APPDATA%`
-- [ ] Build output: rename `.exe` → `.scr` in post-build step
-- [ ] Bundle web assets alongside the `.scr` (or embed as resources)
+- [x] Create .NET 8 WinForms project targeting `net8.0-windows`
+- [x] Add NuGet: `Microsoft.Web.WebView2`
+- [x] Implement `Program.cs`: parse `/s` (screensaver), `/p <HWND>` (preview), `/c` (configure), no args → configure
+- [x] `ScreensaverForm.cs`: fullscreen `Form` with `WebView2` control, load `index.html` from app directory
+- [x] `PreviewForm.cs`: embedded preview in Settings thumbnail (parented to HWND)
+- [x] `PreferencesForm.cs`: simple WinForms dialog (same options as Mac prefs)
+- [x] Persist settings: JSON in `%APPDATA%\MatrixScreenSaver\settings.json`
+- [x] Build script (`build.ps1`): publish + rename `.exe` → `.scr` + copy web assets
 - [ ] Test: right-click `.scr` → "Install" on Windows 10/11
 - [ ] Document WebView2 redistributable requirement for Windows 10
 
 **Key APIs:** `Microsoft.Web.WebView2.WinForms.WebView2`, `System.Windows.Forms`, screensaver protocol args
 
-#### Phase 3 — Linux XScreenSaver module (target: 2–3 sessions)
-- [ ] Write `main.c` using `webkit2gtk-4.1` and `gtk4`
+#### Phase 3 — Linux screensaver (target: 2–3 sessions)
+- [x] Write `main.c` using GTK4 + WebKitGTK (webkitgtk-6.0 with webkit2gtk-4.1 fallback)
 - [ ] Accept `--window-id <XID>` for embedding into XScreenSaver's window
 - [ ] Accept `--root` for running on the root window
-- [ ] Load `index.html` from `$XDG_DATA_HOME/matrix-screensaver/` or `/usr/share/matrix-screensaver/`
-- [ ] `install.sh`: copies web assets, desktop file, and binary; registers with `xscreensaver-demo`
-- [ ] CMakeLists.txt: find `webkit2gtk-4.1`, `gtk4`
-- [ ] Test on GNOME (Ubuntu 22.04+) and KDE (Plasma 6)
+- [x] Load `index.html` from `$MATRIX_SCREENSAVER_WEB_ROOT`, `$XDG_DATA_HOME/matrix-screensaver/`, or `/usr/share/matrix-screensaver/`
+- [x] `install.sh`: copies web assets, desktop file, and binary
+- [x] CMakeLists.txt: find GTK4 + WebKitGTK with version fallback
+- [x] `matrix-screensaver.desktop`: desktop entry
+- [ ] Test on GNOME (Ubuntu 24.04) and KDE (Plasma 6)
 - [ ] Provide fallback: a `matrix-screensaver.sh` that launches fullscreen Firefox if WebKit not available
 
 **Key APIs:** `webkit2gtk`, `WebKitWebView`, `gtk_plug_new` (for XEmbed), XScreenSaver `.xml` config format

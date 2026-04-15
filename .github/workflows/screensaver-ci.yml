@@ -1,0 +1,101 @@
+name: Screensaver CI
+
+on:
+  push:
+    branches: [screensaver-port]
+    paths:
+      - 'screensaver/**'
+      - '.github/workflows/screensaver-ci.yml'
+  pull_request:
+    branches: [master]
+    paths:
+      - 'screensaver/**'
+
+jobs:
+  # ── macOS ──────────────────────────────────────────────
+  build-macos:
+    runs-on: macos-14  # Apple Silicon runner
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Matrix.saver
+        run: |
+          cd screensaver/mac
+          chmod +x build.sh
+          ./build.sh
+
+      - name: Verify build output
+        run: |
+          test -d screensaver/mac/dist/Matrix.saver/Contents/MacOS/Matrix || \
+            (echo "ERROR: .saver bundle not found" && exit 1)
+          echo "macOS build OK"
+
+  # ── Windows ────────────────────────────────────────────
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore NuGet packages
+        run: dotnet restore screensaver/windows/MatrixScreenSaver/MatrixScreenSaver.csproj
+
+      - name: Build
+        run: |
+          dotnet publish screensaver/windows/MatrixScreenSaver/MatrixScreenSaver.csproj `
+            -c Release `
+            -r win-x64 `
+            --self-contained false `
+            -o screensaver/windows/dist/build
+
+      - name: Verify build output
+        run: |
+          if (!(Test-Path "screensaver/windows/dist/build/MatrixScreenSaver.exe")) {
+            Write-Error "ERROR: .exe not found"
+            exit 1
+          }
+          Write-Host "Windows build OK"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: MatrixScreenSaver-windows
+          path: screensaver/windows/dist/build/MatrixScreenSaver.exe
+
+  # ── Linux ──────────────────────────────────────────────
+  build-linux:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            cmake \
+            pkg-config \
+            libgtk-4-dev \
+            libwebkitgtk-6.0-dev
+
+      - name: Build
+        run: |
+          cd screensaver/linux
+          mkdir -p build && cd build
+          cmake ..
+          make -j$(nproc)
+
+      - name: Verify build output
+        run: |
+          test -x screensaver/linux/build/matrix-screensaver || \
+            (echo "ERROR: binary not found" && exit 1)
+          echo "Linux build OK"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: matrix-screensaver-linux
+          path: screensaver/linux/build/matrix-screensaver
