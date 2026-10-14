@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=Matrix Digital Rain
+Comment=The Matrix digital rain screensaver using WebGL
+Exec=matrix-screensaver
+Type=Application
+Categories=Screensaver;
+Icon=matrix-screensaver
+X-GNOME-Autostart-Phase=Application
